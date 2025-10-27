@@ -15,13 +15,9 @@ Aplicación web escrita en PHP puro que permite gestionar inmuebles, amenities, 
    php bin/install.php
    ```
    El script validará los requisitos, solicitará la ruta del archivo SQLite y te guiará por la configuración inicial sin necesidad de abrir un puerto o un navegador.
-3. (Opcional) Si prefieres la versión web del asistente, inicia el servidor embebido y visita `http://127.0.0.1:8000/install.php`:
-   ```bash
-   php -S 127.0.0.1:8000 -t public/
-   ```
-4. Tras finalizar la instalación (vía CLI o web) podrás acceder directamente al panel principal (`/`) o al panel de administración (`/admin`).
+3. Tras finalizar la instalación podrás desplegar los archivos de la raíz del proyecto en tu servidor web (Apache, Nginx, etc.) y acceder al panel principal (`/`) o al panel de administración (`/admin`).
 
-> Ambos asistentes generan/actualizan `config.php`, crean la base de datos y dejan cargados los ajustes básicos en la tabla `settings`. Recuerda eliminar o restringir el acceso a `public/install.php` después del despliegue.
+> El asistente CLI genera/actualiza `config.php`, crea la base de datos y deja cargados los ajustes básicos en la tabla `settings`.
 
 ### Importar XML desde CLI
 
@@ -60,9 +56,8 @@ app/
   Support/           # Configuración, DB, helpers, CSRF y vistas
   Views/             # Plantillas PHP con layout compartido
 bin/import.php       # Script CLI para importar feeds XML existentes
-public/index.php     # Front controller seguro
-public/install.php   # Asistente de instalación paso a paso
-public/assets/       # Estilos base
+index.php            # Front controller seguro en la raíz
+assets/              # Estilos base disponibles públicamente
 config.php           # Configuración global (ruta de SQLite y bandera de instalación)
 ```
 
@@ -71,7 +66,7 @@ config.php           # Configuración global (ruta de SQLite y bandera de instal
 El proyecto no depende de frameworks, por lo que basta con ejecutar:
 
 ```bash
-php -l public/index.php
+php -l index.php
 find app bin -name '*.php' -print0 | xargs -0 -n1 php -l
 ```
 

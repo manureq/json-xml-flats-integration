@@ -125,8 +125,7 @@ try {
 }
 
 fwrite(STDOUT, "\nInstalación completada con éxito.\n");
-fwrite(STDOUT, "Puedes iniciar el panel administrativo ejecutando un servidor PHP: php -S 127.0.0.1:8000 -t public/\n");
-fwrite(STDOUT, "Posteriormente accede a /admin con tu navegador.\n");
+fwrite(STDOUT, "Publica el contenido de este directorio en tu servidor web preferido y accede al panel administrativo mediante /admin.\n");
 
 /**
  * @param string $question
