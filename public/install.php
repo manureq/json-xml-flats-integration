@@ -6,12 +6,12 @@ require_once __DIR__ . '/../app/support/helpers.php';
 require_once __DIR__ . '/../app/support/Config.php';
 require_once __DIR__ . '/../app/support/Database.php';
 require_once __DIR__ . '/../app/support/Csrf.php';
+require_once __DIR__ . '/../app/support/Installer.php';
 require_once __DIR__ . '/../app/Models/Repositories/SettingRepository.php';
 
-use App\Models\Repositories\SettingRepository;
 use App\Support\Config;
 use App\Support\Csrf;
-use App\Support\Database;
+use App\Support\Installer;
 
 session_boot();
 
@@ -45,36 +45,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($step === 2) {
-            $inputPath = trim((string) ($_POST['database'] ?? ''));
-            if ($inputPath === '') {
-                $errors[] = 'Debes indicar la ruta donde se almacenará la base de datos SQLite.';
-            } elseif (str_contains($inputPath, '..')) {
-                $errors[] = 'La ruta de la base de datos no puede contener ..';
-            } else {
-                $isAbsolute = str_starts_with($inputPath, '/') || preg_match('/^[A-Za-z]:\\\\/', $inputPath) === 1;
-                if (!$isAbsolute) {
-                    $clean = ltrim(str_replace('\\', '/', $inputPath), '/');
-                    $expression = "__DIR__ . '/" . addslashes($clean) . "'";
-                    $absolute = $basePath . '/' . $clean;
-                } else {
-                    $absolute = $inputPath;
-                    $expression = var_export($absolute, true);
-                }
+            $inputPath = (string) ($_POST['database'] ?? '');
 
-                $directory = dirname($absolute);
-                if (!is_dir($directory)) {
-                    if (!mkdir($directory, 0755, true) && !is_dir($directory)) {
-                        $errors[] = 'No se pudo crear el directorio de la base de datos: ' . $directory;
-                    }
-                }
-
-                if ($errors === []) {
-                    write_config($configPath, $expression, false);
-                    $_SESSION['install']['database_expression'] = $expression;
-                    $_SESSION['install']['database_path'] = $absolute;
-                    header('Location: ?step=3');
-                    exit;
-                }
+            try {
+                [$expression, $absolute] = Installer::determineDatabase($inputPath, $basePath);
+                Installer::writeConfig($configPath, $expression, false);
+                $_SESSION['install']['database_expression'] = $expression;
+                $_SESSION['install']['database_path'] = $absolute;
+                header('Location: ?step=3');
+                exit;
+            } catch (\InvalidArgumentException | \RuntimeException $e) {
+                $errors[] = $e->getMessage();
             }
         }
 
@@ -101,17 +82,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($errors === []) {
                 try {
-                    Config::load($configPath);
-                    Database::migrate();
-                    $settings = new SettingRepository();
-                    $settings->updateMany([
+                    Installer::finalize($configPath, [
                         'site_name' => $siteName,
                         'contact_email' => $contactEmail,
                         'default_currency' => $defaultCurrency,
                         'support_phone' => $supportPhone,
                     ]);
                     $expression = $_SESSION['install']['database_expression'] ?? var_export(Config::get('database'), true);
-                    write_config($configPath, $expression, true);
+                    Installer::writeConfig($configPath, $expression, true);
                     unset($_SESSION['install']['database_expression'], $_SESSION['install']['database_path']);
                     $_SESSION['install']['complete'] = true;
                     header('Location: ?step=4');
@@ -122,34 +100,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
-}
-
-function requirement_status(): array
-{
-    return [
-        'PHP 8.1 o superior' => version_compare(PHP_VERSION, '8.1.0', '>='),
-        'Extensión PDO Sqlite' => extension_loaded('pdo_sqlite'),
-        'Extensión SimpleXML' => extension_loaded('SimpleXML'),
-        'Extensión DOM' => extension_loaded('dom'),
-        'Permisos de escritura en config.php' => is_writable(__DIR__ . '/../config.php'),
-    ];
-}
-
-function write_config(string $path, string $databaseExpression, bool $installed): void
-{
-    $flag = $installed ? 'true' : 'false';
-    $contents = <<<PHP
-<?php
-
-declare(strict_types=1);
-
-return [
-    'database' => {$databaseExpression},
-    'installed' => {$flag},
-];
-PHP;
-
-    file_put_contents($path, $contents);
 }
 
 function render_header(string $title): void
@@ -178,7 +128,7 @@ if ($step === 1) {
     echo '<h1>Bienvenido</h1>';
     echo '<p>Este asistente configurará la base de datos, los datos básicos del sitio y verificará los requisitos para operar la plataforma inmobiliaria.</p>';
     echo '<ul class="status-list">';
-    foreach (requirement_status() as $label => $ok) {
+    foreach (Installer::requirementStatus($configPath) as $label => $ok) {
         $class = $ok ? 'status-ok' : 'status-fail';
         $symbol = $ok ? '✔' : '✖';
         echo '<li><span>' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</span><span class="' . $class . '">' . $symbol . '</span></li>';

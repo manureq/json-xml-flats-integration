@@ -10,17 +10,18 @@ Aplicación web escrita en PHP puro que permite gestionar inmuebles, amenities, 
 ## Instalación rápida
 
 1. Clona el repositorio y sitúate en la carpeta del proyecto.
-2. Inicia el servidor embebido de PHP apuntando a `public/`:
+2. Ejecuta el asistente de instalación desde la terminal:
+   ```bash
+   php bin/install.php
+   ```
+   El script validará los requisitos, solicitará la ruta del archivo SQLite y te guiará por la configuración inicial sin necesidad de abrir un puerto o un navegador.
+3. (Opcional) Si prefieres la versión web del asistente, inicia el servidor embebido y visita `http://127.0.0.1:8000/install.php`:
    ```bash
    php -S 127.0.0.1:8000 -t public/
    ```
-3. Abre `http://127.0.0.1:8000/install.php` y sigue el asistente de instalación paso a paso:
-   - Verificación de requisitos.
-   - Definición de la ruta del archivo SQLite.
-   - Configuración inicial del sitio (nombre comercial, correo de contacto, moneda y teléfono de soporte).
-4. Tras finalizar el asistente podrás acceder directamente al panel principal (`/`) o al panel de administración (`/admin`).
+4. Tras finalizar la instalación (vía CLI o web) podrás acceder directamente al panel principal (`/`) o al panel de administración (`/admin`).
 
-> El asistente genera/actualiza `config.php`, crea la base de datos y deja cargados los ajustes básicos en la tabla `settings`. Una vez en producción, elimina o restringe el acceso a `public/install.php`.
+> Ambos asistentes generan/actualizan `config.php`, crean la base de datos y dejan cargados los ajustes básicos en la tabla `settings`. Recuerda eliminar o restringir el acceso a `public/install.php` después del despliegue.
 
 ### Importar XML desde CLI
 
