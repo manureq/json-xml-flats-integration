@@ -2,12 +2,12 @@
 $title = 'Propiedades';
 ob_start();
 ?>
-<section class="card">
-    <header class="card-header">
-        <h1>Listado de propiedades</h1>
-        <a class="button" href="/properties/create">Crear</a>
+<section class="panel">
+    <header class="panel-header">
+        <h2>Listado de propiedades</h2>
+        <a class="button primary" href="/properties/create">Nueva propiedad</a>
     </header>
-    <table class="table">
+    <table>
         <thead>
         <tr>
             <th>Título</th>
@@ -18,6 +18,11 @@ ob_start();
         </tr>
         </thead>
         <tbody>
+        <?php if ($properties === []): ?>
+            <tr>
+                <td colspan="5" class="muted">No hay propiedades registradas todavía.</td>
+            </tr>
+        <?php endif; ?>
         <?php foreach ($properties as $property): ?>
             <tr>
                 <td><?= htmlspecialchars($property['title'], ENT_QUOTES, 'UTF-8'); ?></td>
@@ -30,13 +35,13 @@ ob_start();
                         N/D
                     <?php endif; ?>
                 </td>
-                <td class="actions">
-                    <a href="/properties?id=<?= (int) $property['id']; ?>">Ver</a>
-                    <a href="/properties/edit?id=<?= (int) $property['id']; ?>">Editar</a>
+                <td class="table-actions">
+                    <a class="link" href="/properties?id=<?= (int) $property['id']; ?>">Ver</a>
+                    <a class="link" href="/properties/edit?id=<?= (int) $property['id']; ?>">Editar</a>
                     <form method="post" action="/properties/delete" onsubmit="return confirm('¿Eliminar propiedad?');">
                         <?= csrf_field(); ?>
                         <input type="hidden" name="id" value="<?= (int) $property['id']; ?>">
-                        <button type="submit">Eliminar</button>
+                        <button type="submit" class="link danger">Eliminar</button>
                     </form>
                 </td>
             </tr>

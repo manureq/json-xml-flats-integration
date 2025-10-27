@@ -4,14 +4,17 @@ $defaultCurrency = $settings['default_currency'] ?? 'EUR';
 $currencyValue = $property['currency'] ?? $defaultCurrency;
 ob_start();
 ?>
-<section class="card">
-    <h1><?= htmlspecialchars($title, ENT_QUOTES, 'UTF-8'); ?></h1>
-    <form method="post" action="<?= $property ? '/properties/update' : '/properties'; ?>">
+<section class="panel">
+    <header>
+        <h2><?= htmlspecialchars($title, ENT_QUOTES, 'UTF-8'); ?></h2>
+        <p>Completa la información clave antes de publicar en los portales.</p>
+    </header>
+    <form method="post" action="<?= $property ? '/properties/update' : '/properties'; ?>" class="form-grid large">
         <?= csrf_field(); ?>
         <?php if ($property): ?>
             <input type="hidden" name="id" value="<?= (int) $property['id']; ?>">
         <?php endif; ?>
-        <div class="grid">
+        <div class="form-grid">
             <label>Título
                 <input type="text" name="title" required value="<?= htmlspecialchars($property['title'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
             </label>
@@ -55,11 +58,11 @@ ob_start();
                 <input type="date" name="available_from" value="<?= htmlspecialchars($property['available_from'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
             </label>
         </div>
-        <label>Descripción
+        <label class="full">Descripción
             <textarea name="description" rows="6"><?= htmlspecialchars($property['description'] ?? '', ENT_QUOTES, 'UTF-8'); ?></textarea>
         </label>
 
-        <fieldset>
+        <fieldset class="panel-fieldset">
             <legend>Amenities</legend>
             <div id="amenities">
                 <?php $existingAmenities = $amenities ?? ($property['amenities'] ?? []); ?>
@@ -81,7 +84,7 @@ ob_start();
             </div>
         </fieldset>
 
-        <fieldset>
+        <fieldset class="panel-fieldset">
             <legend>Multimedia</legend>
             <div id="media-items">
                 <?php $existingMedia = $media ?? ($property['media'] ?? []); ?>
@@ -118,20 +121,22 @@ ob_start();
             </div>
         </fieldset>
 
-        <fieldset>
+        <fieldset class="panel-fieldset">
             <legend>Portales</legend>
-            <div class="grid portals">
+            <div class="portal-grid">
                 <?php foreach ($portals as $portal): ?>
                     <?php $checked = !empty($portal['selected']); ?>
                     <label>
                         <input type="checkbox" name="portals[]" value="<?= htmlspecialchars($portal['slug'], ENT_QUOTES, 'UTF-8'); ?>" <?= $checked ? 'checked' : ''; ?>>
-                        <?= htmlspecialchars($portal['name'], ENT_QUOTES, 'UTF-8'); ?>
+                        <span><?= htmlspecialchars($portal['name'], ENT_QUOTES, 'UTF-8'); ?></span>
                     </label>
                 <?php endforeach; ?>
             </div>
         </fieldset>
 
-        <button class="button" type="submit">Guardar</button>
+        <div class="actions end">
+            <button class="button primary" type="submit">Guardar propiedad</button>
+        </div>
     </form>
 </section>
 <?php

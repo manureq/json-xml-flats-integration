@@ -2,12 +2,14 @@
 $title = htmlspecialchars($property['title'], ENT_QUOTES, 'UTF-8');
 ob_start();
 ?>
-<section class="card">
-    <h1><?= $title; ?></h1>
-    <p class="muted">Tipo: <?= htmlspecialchars($property['type'] ?? 'N/D', ENT_QUOTES, 'UTF-8'); ?></p>
+<section class="panel">
+    <header>
+        <h2><?= $title; ?></h2>
+        <p class="muted">Tipo: <?= htmlspecialchars($property['type'] ?? 'N/D', ENT_QUOTES, 'UTF-8'); ?></p>
+    </header>
     <p><?= nl2br(htmlspecialchars($property['description'] ?? '', ENT_QUOTES, 'UTF-8')); ?></p>
 
-    <dl class="details">
+    <dl class="details-grid">
         <div><dt>Dirección</dt><dd><?= htmlspecialchars($property['address'] ?? '', ENT_QUOTES, 'UTF-8'); ?></dd></div>
         <div><dt>Ciudad</dt><dd><?= htmlspecialchars($property['city'] ?? '', ENT_QUOTES, 'UTF-8'); ?></dd></div>
         <div><dt>País</dt><dd><?= htmlspecialchars($property['country'] ?? '', ENT_QUOTES, 'UTF-8'); ?></dd></div>
@@ -18,7 +20,7 @@ ob_start();
         <div><dt>Área</dt><dd><?= htmlspecialchars((string) ($property['area'] ?? 'N/D'), ENT_QUOTES, 'UTF-8'); ?> m²</dd></div>
     </dl>
 
-    <section>
+    <section class="panel-section">
         <h2>Amenities</h2>
         <ul class="chip-list">
             <?php foreach ($amenities as $amenity): ?>
@@ -30,7 +32,7 @@ ob_start();
         </ul>
     </section>
 
-    <section>
+    <section class="panel-section">
         <h2>Multimedia</h2>
         <ul class="media-list">
             <?php foreach ($media as $item): ?>
@@ -49,7 +51,7 @@ ob_start();
         </ul>
     </section>
 
-    <section>
+    <section class="panel-section">
         <h2>Portales habilitados</h2>
         <ul class="chip-list">
             <?php foreach ($portals as $portal): ?>
@@ -62,8 +64,8 @@ ob_start();
     </section>
 
     <div class="actions">
-        <a class="button" href="/properties/edit?id=<?= (int) $property['id']; ?>">Editar</a>
-        <a class="button-secondary" href="/properties">Volver</a>
+        <a class="button primary" href="/properties/edit?id=<?= (int) $property['id']; ?>">Editar</a>
+        <a class="button" href="/properties">Volver</a>
     </div>
 </section>
 <?php

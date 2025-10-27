@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Models\Repositories\PropertyRepository;
+use App\Support\Auth;
 use App\Support\View;
 
 final class DashboardController
@@ -13,6 +14,7 @@ final class DashboardController
 
     public function __construct()
     {
+        Auth::requireLogin();
         $this->properties = new PropertyRepository();
     }
 

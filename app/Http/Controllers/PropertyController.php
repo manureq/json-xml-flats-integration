@@ -9,6 +9,7 @@ use App\Models\Repositories\AmenityRepository;
 use App\Models\Repositories\MediaRepository;
 use App\Models\Repositories\PortalRepository;
 use App\Models\Repositories\PropertyRepository;
+use App\Support\Auth;
 use App\Support\Csrf;
 use App\Support\View;
 
@@ -21,6 +22,7 @@ final class PropertyController
 
     public function __construct()
     {
+        Auth::requireLogin();
         $this->properties = new PropertyRepository();
         $this->amenities = new AmenityRepository();
         $this->media = new MediaRepository();

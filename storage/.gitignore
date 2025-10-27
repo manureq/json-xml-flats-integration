@@ -1,3 +1,3 @@
-# Persist generated SQLite databases locally without committing them
-*.sqlite
+# Persist runtime artifacts locally without versioning them
+*
 !.gitignore

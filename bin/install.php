@@ -76,6 +76,11 @@ if (file_exists($configPath) && filesize($configPath) > 0) {
     $config = require $configPath;
 }
 
+$adminConfig = [
+    'username' => (string) ($config['admin']['username'] ?? 'admin'),
+    'password_hash' => (string) ($config['admin']['password_hash'] ?? ''),
+];
+
 $defaultSqlite = $storageDir . '/realestate.sqlite';
 
 if (($config['installed'] ?? false) === true) {
@@ -99,7 +104,7 @@ if (!$allOk) {
     exit(1);
 }
 
-fwrite(STDOUT, "\nPaso 1/3: configuración de la base de datos\n");
+fwrite(STDOUT, "\nPaso 1/4: configuración de la base de datos\n");
 $defaultDatabase = (string) ($config['database'] ?? $defaultSqlite);
 $databaseExpression = '';
 $absolute = '';
@@ -112,7 +117,7 @@ while (true) {
         if (!file_exists($absolute) && @touch($absolute) === false) {
             throw new \RuntimeException('No se pudo crear el archivo SQLite en: ' . $absolute);
         }
-        Installer::writeConfig($configPath, $databaseExpression, false);
+        Installer::writeConfig($configPath, $databaseExpression, false, $adminConfig);
         fwrite(STDOUT, "✔ Ruta guardada en config.php\n\n");
         break;
     } catch (\InvalidArgumentException | \RuntimeException $e) {
@@ -120,7 +125,7 @@ while (true) {
     }
 }
 
-fwrite(STDOUT, "Paso 2/3: datos generales del sitio\n");
+fwrite(STDOUT, "Paso 2/4: datos generales del sitio\n");
 
 $siteName = '';
 while ($siteName === '') {
@@ -157,14 +162,56 @@ while ($defaultCurrency === '') {
 
 $supportPhone = trim(prompt_cli('Teléfono de soporte (opcional)', ''));
 
-fwrite(STDOUT, "\nPaso 3/3: confirmación\n");
+fwrite(STDOUT, "\nPaso 3/4: credenciales de acceso\n");
+
+$defaultAdminUser = $adminConfig['username'] !== '' ? $adminConfig['username'] : 'admin';
+$adminUsername = '';
+while ($adminUsername === '') {
+    $adminUsername = trim(prompt_cli('Usuario administrador', $defaultAdminUser));
+    if ($adminUsername === '') {
+        fwrite(STDERR, "⚠ El usuario no puede quedar vacío.\n");
+    }
+}
+
+$preservePassword = $adminConfig['password_hash'] !== '';
+$adminPasswordHash = $adminConfig['password_hash'];
+
+while (true) {
+    $hint = $preservePassword ? ' (deja vacío para conservar)' : '';
+    $password = prompt_password('Contraseña del administrador' . $hint);
+
+    if ($password === '') {
+        if ($preservePassword) {
+            break;
+        }
+        fwrite(STDERR, "⚠ Debes definir una contraseña.\n");
+        continue;
+    }
+
+    $confirm = prompt_password('Repite la contraseña');
+    if ($password !== $confirm) {
+        fwrite(STDERR, "⚠ Las contraseñas no coinciden.\n");
+        continue;
+    }
+
+    $adminPasswordHash = password_hash($password, PASSWORD_DEFAULT);
+    break;
+}
+
+$adminConfig = [
+    'username' => $adminUsername,
+    'password_hash' => $adminPasswordHash,
+];
+
+fwrite(STDOUT, "\nPaso 4/4: confirmación\n");
 
 fwrite(STDOUT, "Se guardarán los siguientes datos:\n");
 fwrite(STDOUT, " - Ruta de la base de datos: {$absolute}\n");
 fwrite(STDOUT, " - Nombre del sitio: {$siteName}\n");
 fwrite(STDOUT, " - Correo de contacto: " . ($contactEmail !== '' ? $contactEmail : '(vacío)') . "\n");
 fwrite(STDOUT, " - Moneda por defecto: {$defaultCurrency}\n");
-fwrite(STDOUT, " - Teléfono de soporte: " . ($supportPhone !== '' ? $supportPhone : '(vacío)') . "\n\n");
+fwrite(STDOUT, " - Teléfono de soporte: " . ($supportPhone !== '' ? $supportPhone : '(vacío)') . "\n");
+fwrite(STDOUT, " - Usuario administrador: {$adminConfig['username']}\n\n");
 
 $confirmation = strtolower(prompt_cli('¿Deseas continuar? (s/n)', 's'));
 if (!in_array($confirmation, ['s', 'si', 'sí', 'y', 'yes'], true)) {
@@ -179,7 +226,7 @@ try {
         'default_currency' => $defaultCurrency,
         'support_phone' => $supportPhone,
     ]);
-    Installer::writeConfig($configPath, $databaseExpression, true);
+    Installer::writeConfig($configPath, $databaseExpression, true, $adminConfig);
 } catch (\Throwable $e) {
     fwrite(STDERR, "Ocurrió un error al finalizar la instalación: " . $e->getMessage() . "\n");
     exit(1);
@@ -208,4 +255,50 @@ function prompt_cli(string $question, ?string $default = null): string
     }
 
     return $line;
+}
+
+function prompt_password(string $question): string
+{
+    if (stripos(PHP_OS, 'WIN') === 0) {
+        fwrite(STDOUT, $question . ': ');
+        $line = fgets(STDIN);
+        return $line === false ? '' : trim($line);
+    }
+
+    $sttyMode = null;
+    $sttySupported = false;
+    if (function_exists('exec')) {
+        $output = [];
+        $code = 1;
+        @exec('stty -g', $output, $code);
+        if ($code === 0 && isset($output[0]) && stripos($output[0], 'inappropriate ioctl') === false) {
+            $sttyMode = $output[0];
+            $sttySupported = true;
+        }
+    }
+
+    fwrite(STDOUT, $question . ': ');
+    $sttyDisabled = false;
+    if ($sttySupported && $sttyMode !== null) {
+        $disableStatus = 1;
+        @exec('stty -echo 2>/dev/null', $dummy, $disableStatus);
+        if ($disableStatus === 0) {
+            $sttyDisabled = true;
+        } else {
+            $sttySupported = false;
+        }
+    }
+
+    $line = fgets(STDIN);
+
+    if ($sttyDisabled && $sttyMode !== null) {
+        @exec('stty ' . $sttyMode . ' 2>/dev/null');
+        fwrite(STDOUT, PHP_EOL);
+    }
+
+    if ($line === false) {
+        return '';
+    }
+
+    return trim($line);
 }

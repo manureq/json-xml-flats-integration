@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Support;
 
 use App\Models\Repositories\SettingRepository;
+use App\Support\Auth;
 
 final class View
 {
@@ -27,6 +28,13 @@ final class View
 
         if (!array_key_exists('flash', $data)) {
             $data['flash'] = \flash();
+        }
+
+        if (!array_key_exists('auth', $data)) {
+            $data['auth'] = [
+                'check' => Auth::check(),
+                'user' => Auth::user(),
+            ];
         }
 
         extract($data, EXTR_SKIP);

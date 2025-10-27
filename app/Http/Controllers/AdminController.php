@@ -7,6 +7,8 @@ namespace App\Http\Controllers;
 use App\Models\Repositories\PortalRepository;
 use App\Models\Repositories\SettingRepository;
 use App\Services\ImportService;
+use App\Services\UpdateService;
+use App\Support\Auth;
 use App\Support\View;
 
 final class AdminController
@@ -14,12 +16,15 @@ final class AdminController
     private SettingRepository $settings;
     private PortalRepository $portals;
     private ImportService $importer;
+    private UpdateService $updates;
 
     public function __construct()
     {
+        Auth::requireLogin();
         $this->settings = new SettingRepository();
         $this->portals = new PortalRepository();
         $this->importer = new ImportService();
+        $this->updates = new UpdateService();
     }
 
     public function index(): void
@@ -113,6 +118,57 @@ final class AdminController
             flash("Se importaron {$count} propiedades desde el XML proporcionado.");
         } catch (\Throwable $e) {
             flash('Error al importar XML: ' . $e->getMessage());
+        }
+
+        redirect('/admin');
+    }
+
+    public function uploadUpdate(): void
+    {
+        if (!class_exists('ZipArchive')) {
+            flash('El servidor no tiene habilitada la extensión zip.');
+            redirect('/admin');
+        }
+
+        if (!isset($_FILES['update_package']) || !is_array($_FILES['update_package'])) {
+            flash('Debes seleccionar un archivo ZIP válido.');
+            redirect('/admin');
+        }
+
+        $file = $_FILES['update_package'];
+        $error = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
+        if ($error !== UPLOAD_ERR_OK) {
+            flash('No se pudo subir el archivo ZIP (código de error: ' . $error . ').');
+            redirect('/admin');
+        }
+
+        $tmpPath = (string) ($file['tmp_name'] ?? '');
+        if ($tmpPath === '' || !is_file($tmpPath)) {
+            flash('No se encontró el archivo temporal de la actualización.');
+            redirect('/admin');
+        }
+
+        $storageUpdates = BASE_PATH . '/storage/updates';
+        if (!is_dir($storageUpdates) && !@mkdir($storageUpdates, 0775, true) && !is_dir($storageUpdates)) {
+            flash('No se pudo preparar la carpeta de actualizaciones.');
+            redirect('/admin');
+        }
+
+        $filename = preg_replace('/[^a-zA-Z0-9._-]/', '_', (string) ($file['name'] ?? 'update.zip'));
+        $target = $storageUpdates . '/' . date('Ymd_His') . '_' . $filename;
+
+        if (!@move_uploaded_file($tmpPath, $target)) {
+            if (!@rename($tmpPath, $target)) {
+                flash('No se pudo almacenar el paquete de actualización.');
+                redirect('/admin');
+            }
+        }
+
+        try {
+            $applied = $this->updates->apply($target, BASE_PATH);
+            flash("Actualización aplicada correctamente ({$applied} archivos actualizados).");
+        } catch (\Throwable $e) {
+            flash('No se pudo aplicar la actualización: ' . $e->getMessage());
         }
 
         redirect('/admin');
