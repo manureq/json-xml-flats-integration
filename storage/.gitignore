@@ -1,0 +1,3 @@
+# Persist runtime artifacts locally without versioning them
+*
+!.gitignore
