@@ -3,6 +3,6 @@
 declare(strict_types=1);
 
 return [
-    'database' => __DIR__ . '/storage/database.sqlite',
+    'database' => __DIR__ . '/storage/realestate.sqlite',
     'installed' => false,
 ];

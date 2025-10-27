@@ -15,12 +15,17 @@ final class Installer
      */
     public static function requirementStatus(string $configPath): array
     {
+        $storagePath = dirname($configPath) . '/storage';
+        $configWritable = file_exists($configPath) ? is_writable($configPath) : is_writable(dirname($configPath));
+        $storageWritable = is_dir($storagePath) ? is_writable($storagePath) : is_writable(dirname($storagePath));
+
         return [
             'PHP 8.1 o superior' => version_compare(PHP_VERSION, '8.1.0', '>='),
             'Extensión PDO Sqlite' => extension_loaded('pdo_sqlite'),
             'Extensión SimpleXML' => extension_loaded('SimpleXML'),
             'Extensión DOM' => extension_loaded('dom'),
-            'Permisos de escritura en config.php' => is_writable($configPath),
+            'Permisos de escritura en config.php' => $configWritable,
+            'Permisos de escritura en storage/' => $storageWritable,
         ];
     }
 

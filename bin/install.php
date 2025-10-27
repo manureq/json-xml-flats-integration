@@ -8,17 +8,75 @@ if (PHP_SAPI !== 'cli') {
     exit(1);
 }
 
-require_once __DIR__ . '/../app/support/helpers.php';
-require_once __DIR__ . '/../app/support/Config.php';
-require_once __DIR__ . '/../app/support/Database.php';
-require_once __DIR__ . '/../app/support/Installer.php';
-require_once __DIR__ . '/../app/Models/Repositories/SettingRepository.php';
+$BASE = realpath(__DIR__ . '/..');
+if ($BASE === false) {
+    fwrite(STDERR, "[ERROR] No se pudo resolver la ruta base del proyecto.\n");
+    exit(1);
+}
+
+// Resolución robusta del path de Config.php (no depende del cwd)
+$CONFIG_FILE = $BASE . '/app/support/Config.php';
+if (!is_file($CONFIG_FILE)) {
+    fwrite(STDERR, "[ERROR] No se encontró Config.php en: {$CONFIG_FILE}\nEstructura esperada: app/support/Config.php\n");
+    exit(1);
+}
+require_once $CONFIG_FILE;
+
+require_once $BASE . '/app/support/helpers.php';
+require_once $BASE . '/app/support/Database.php';
+require_once $BASE . '/app/support/Installer.php';
+require_once $BASE . '/app/Models/Repositories/SettingRepository.php';
 
 use App\Support\Installer;
 
-$basePath = dirname(__DIR__);
+$basePath = $BASE;
+
+$storageDir = $basePath . '/storage';
+if (!is_dir($storageDir)) {
+    if (!@mkdir($storageDir, 0775, true) && !is_dir($storageDir)) {
+        fwrite(STDERR, "[ERROR] No se pudo crear la carpeta de almacenamiento: {$storageDir}\n");
+        exit(1);
+    }
+}
+
+function ensureWritable(string $path): void
+{
+    if (is_dir($path)) {
+        if (!is_writable($path)) {
+            fwrite(STDERR, "[ERROR] La carpeta no es escribible: {$path}\n");
+            exit(1);
+        }
+
+        return;
+    }
+
+    $dir = dirname($path);
+    if (!is_dir($dir) || !is_writable($dir)) {
+        fwrite(STDERR, "[ERROR] No se puede escribir en el directorio: {$dir}\n");
+        exit(1);
+    }
+
+    if (file_exists($path) && !is_writable($path)) {
+        fwrite(STDERR, "[ERROR] El archivo no es escribible: {$path}\n");
+        exit(1);
+    }
+}
+
+ensureWritable($storageDir);
+
 $configPath = $basePath . '/config.php';
-$config = file_exists($configPath) ? require $configPath : [];
+if (!file_exists($configPath) && @touch($configPath) === false) {
+    fwrite(STDERR, "[ERROR] No se pudo crear el archivo de configuración en: {$configPath}\n");
+    exit(1);
+}
+ensureWritable($configPath);
+
+$config = [];
+if (file_exists($configPath) && filesize($configPath) > 0) {
+    $config = require $configPath;
+}
+
+$defaultSqlite = $storageDir . '/realestate.sqlite';
 
 if (($config['installed'] ?? false) === true) {
     fwrite(STDOUT, "La plataforma ya está instalada. Puedes acceder al panel con tus credenciales.\n");
@@ -42,7 +100,7 @@ if (!$allOk) {
 }
 
 fwrite(STDOUT, "\nPaso 1/3: configuración de la base de datos\n");
-$defaultDatabase = (string) ($config['database'] ?? 'storage/database.sqlite');
+$defaultDatabase = (string) ($config['database'] ?? $defaultSqlite);
 $databaseExpression = '';
 $absolute = '';
 
@@ -51,6 +109,9 @@ while (true) {
 
     try {
         [$databaseExpression, $absolute] = Installer::determineDatabase($input, $basePath);
+        if (!file_exists($absolute) && @touch($absolute) === false) {
+            throw new \RuntimeException('No se pudo crear el archivo SQLite en: ' . $absolute);
+        }
         Installer::writeConfig($configPath, $databaseExpression, false);
         fwrite(STDOUT, "✔ Ruta guardada en config.php\n\n");
         break;
