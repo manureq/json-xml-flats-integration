@@ -1,0 +1,49 @@
+<?php
+$title = 'Propiedades';
+ob_start();
+?>
+<section class="card">
+    <header class="card-header">
+        <h1>Listado de propiedades</h1>
+        <a class="button" href="/properties/create">Crear</a>
+    </header>
+    <table class="table">
+        <thead>
+        <tr>
+            <th>Título</th>
+            <th>Tipo</th>
+            <th>Ciudad</th>
+            <th>Precio</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        <?php foreach ($properties as $property): ?>
+            <tr>
+                <td><?= htmlspecialchars($property['title'], ENT_QUOTES, 'UTF-8'); ?></td>
+                <td><?= htmlspecialchars($property['type'] ?? 'N/D', ENT_QUOTES, 'UTF-8'); ?></td>
+                <td><?= htmlspecialchars($property['city'] ?? 'N/D', ENT_QUOTES, 'UTF-8'); ?></td>
+                <td>
+                    <?php if ($property['rent_price'] !== null): ?>
+                        <?= number_format((float) $property['rent_price'], 2); ?> <?= htmlspecialchars($property['currency'] ?? '', ENT_QUOTES, 'UTF-8'); ?>
+                    <?php else: ?>
+                        N/D
+                    <?php endif; ?>
+                </td>
+                <td class="actions">
+                    <a href="/properties?id=<?= (int) $property['id']; ?>">Ver</a>
+                    <a href="/properties/edit?id=<?= (int) $property['id']; ?>">Editar</a>
+                    <form method="post" action="/properties/delete" onsubmit="return confirm('¿Eliminar propiedad?');">
+                        <?= csrf_field(); ?>
+                        <input type="hidden" name="id" value="<?= (int) $property['id']; ?>">
+                        <button type="submit">Eliminar</button>
+                    </form>
+                </td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+</section>
+<?php
+$content = ob_get_clean();
+require __DIR__ . '/../layout.php';
